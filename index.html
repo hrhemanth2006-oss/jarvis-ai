@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06152b"><link rel="manifest" href="manifest.json">
+<title>JARVIS AI</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 25%,#123d69,#06152b 58%,#020812);color:#d9f5ff;font-family:Arial,sans-serif;min-height:100vh}
+main{max-width:620px;margin:auto;padding:22px 16px 40px;text-align:center}.tag{letter-spacing:5px;color:#65dfff;font-size:12px;margin-top:10px}
+h1{font-size:36px;letter-spacing:8px;margin:8px 0;color:#e9fbff;text-shadow:0 0 18px #21baff}
+.sub{color:#8dbbd2;font-size:13px}.orb{width:220px;height:220px;margin:26px auto 20px;border-radius:50%;display:grid;place-items:center;position:relative;border:2px solid #43d7ff;box-shadow:0 0 22px #149edc, inset 0 0 30px #146caa}
+.orb:before,.orb:after{content:"";position:absolute;border-radius:50%;border:1px dashed #5bdcff;inset:13px;animation:spin 18s linear infinite}.orb:after{inset:29px;border-style:solid;opacity:.5;animation-direction:reverse}
+.core{width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,#c5faff 0,#3db9ed 25%,#07538c 65%,#031a35);box-shadow:0 0 35px #38cfff}
+@keyframes spin{to{transform:rotate(360deg)}}.listening .orb{box-shadow:0 0 45px #42eaff,inset 0 0 40px #168cc8}
+.status{color:#73dfff;min-height:22px;font-size:14px}.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+button{border:1px solid #4acfff;background:#092c4b;color:#e6faff;border-radius:24px;padding:13px 19px;font-size:14px;font-weight:bold;box-shadow:0 0 12px #0879b8;cursor:pointer}button.primary{background:#087eb4}
+.panel{background:#061c32cc;border:1px solid #1d6d96;border-radius:14px;padding:15px;margin-top:16px;text-align:left}
+#answer{white-space:pre-wrap;line-height:1.5;color:#d5f5ff;min-height:42px}
+input{width:100%;background:#031426;border:1px solid #286b91;border-radius:10px;padding:14px;color:white;font-size:16px;margin-top:8px}
+.small{font-size:11px;color:#79a9c0;line-height:1.5;margin-top:18px}
+</style></head>
+<body><main id="app">
+<div class="tag">STARK-INSPIRED PERSONAL ASSISTANT</div><h1>J.A.R.V.I.S.</h1><div class="sub">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+<div class="orb"><div class="core"></div></div>
+<div class="status" id="status">SYSTEM ONLINE · READY</div>
+<div class="controls"><button class="primary" id="listen">🎙 TALK TO JARVIS</button><button id="speak">🔊 TEST VOICE</button></div>
+<div class="panel"><b>JARVIS RESPONSE</b><p id="answer">Good evening. JARVIS interface is ready. Tap “Talk to JARVIS” and try: “What time is it?”</p></div>
+<div class="panel"><b>TYPE A COMMAND</b><input id="command" placeholder="Type a message or command…"><div class="controls"><button id="send">SEND</button><button id="clear">CLEAR</button></div></div>
+<div class="small">Starter version: voice recognition depends on browser/device support and may require internet. This prototype handles basic commands locally; connect a secure AI service for open-ended AI conversations. It is an unofficial fan-inspired project, not an official Marvel product.</div>
+</main>
+<script>
+const statusEl=document.getElementById('status'),answer=document.getElementById('answer'),app=document.getElementById('app');
+function say(text){answer.textContent=text;if('speechSynthesis' in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=.95;speechSynthesis.speak(u)}}
+function handle(raw){let q=raw.toLowerCase().trim();if(!q)return;document.getElementById('command').value=raw;
+let reply;
+if(q.includes('time')) reply='The current time is '+new Date().toLocaleTimeString();
+else if(q.includes('date')||q.includes('day')) reply='Today is '+new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+else if(q.includes('hello')||q.includes('hi jarvis')) reply='Hello. JARVIS is online and ready to assist.';
+else if(q.includes('your name')) reply='I am JARVIS, your personal assistant.';
+else if(q.includes('open youtube')){reply='Opening YouTube.';window.open('https://m.youtube.com','_blank')}
+else if(q.includes('open google')){reply='Opening Google.';window.open('https://google.com','_blank')}
+else if(q.includes('help')) reply='You can ask for the time, date, say hello, or say open YouTube or open Google.';
+else reply='I heard: '+raw+'. This starter version does not have its AI brain connected yet. A secure AI connection can be added in the next step.';
+say(reply)}
+document.getElementById('send').onclick=()=>handle(document.getElementById('command').value);
+document.getElementById('command').addEventListener('keydown',e=>{if(e.key==='Enter')handle(e.target.value)});
+document.getElementById('clear').onclick=()=>{document.getElementById('command').value='';answer.textContent='Ready.'};
+document.getElementById('speak').onclick=()=>say('JARVIS voice system online. How may I assist you?');
+document.getElementById('listen').onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){statusEl.textContent='VOICE RECOGNITION NOT SUPPORTED · TRY CHROME';say('Voice recognition is not supported in this browser. Please use typing.');return}
+ const r=new SR();r.lang='en-IN';r.interimResults=false;r.maxAlternatives=1;
+ app.classList.add('listening');statusEl.textContent='LISTENING…';r.onresult=e=>handle(e.results[0][0].transcript);
+ r.onerror=()=>statusEl.textContent='MICROPHONE ERROR · CHECK PERMISSION';
+ r.onend=()=>{app.classList.remove('listening');if(statusEl.textContent==='LISTENING…')statusEl.textContent='SYSTEM ONLINE · READY'};
+ try{r.start()}catch(e){statusEl.textContent='PLEASE TRY AGAIN'}
+};
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script></body></html>
