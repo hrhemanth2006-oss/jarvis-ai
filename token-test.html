@@ -1,0 +1,32 @@
+
+<!doctype html>
+<html>
+<head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JARVIS Token Test</title></head>
+<body style="background:#06152b;color:#fff;font:18px Arial;padding:25px">
+<h2>JARVIS Live Voice Test</h2>
+<button id="test" style="padding:15px">TEST GEMINI LIVE</button>
+<p id="result">Waiting...</p>
+<script>
+document.getElementById("test").onclick = async () => {
+  const result = document.getElementById("result");
+  result.textContent = "Connecting...";
+  try {
+    const r = await fetch(
+      "https://jarvis-ai-brain.hrhemanth2507.workers.dev/token",
+      {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({})
+      }
+    );
+    const d = await r.json();
+    if (!r.ok || !d.token) throw new Error(d.error || "Token failed");
+    result.textContent = "SUCCESS! Gemini Live token created. Expiry: " + d.expiresAt;
+  } catch(e) {
+    result.textContent = "ERROR: " + e.message;
+  }
+};
+</script>
+</body>
+</html>
