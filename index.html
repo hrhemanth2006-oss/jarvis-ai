@@ -29,31 +29,168 @@ input{width:100%;background:#031426;border:1px solid #286b91;border-radius:10px;
 <div class="small">Starter version: voice recognition depends on browser/device support and may require internet. This prototype handles basic commands locally; connect a secure AI service for open-ended AI conversations. It is an unofficial fan-inspired project, not an official Marvel product.</div>
 </main>
 <script>
-const statusEl=document.getElementById('status'),answer=document.getElementById('answer'),app=document.getElementById('app');
-function say(text){answer.textContent=text;if('speechSynthesis' in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang='en-IN';u.rate=.95;speechSynthesis.speak(u)}}
-function handle(raw){let q=raw.toLowerCase().trim();if(!q)return;document.getElementById('command').value=raw;
-let reply;
-if(q.includes('time')) reply='The current time is '+new Date().toLocaleTimeString();
-else if(q.includes('date')||q.includes('day')) reply='Today is '+new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-else if(q.includes('hello')||q.includes('hi jarvis')) reply='Hello. JARVIS is online and ready to assist.';
-else if(q.includes('your name')) reply='I am JARVIS, your personal assistant.';
-else if(q.includes('open youtube')){reply='Opening YouTube.';window.open('https://m.youtube.com','_blank')}
-else if(q.includes('open google')){reply='Opening Google.';window.open('https://google.com','_blank')}
-else if(q.includes('help')) reply='You can ask for the time, date, say hello, or say open YouTube or open Google.';
-else reply='I heard: '+raw+'. This starter version does not have its AI brain connected yet. A secure AI connection can be added in the next step.';
-say(reply)}
-document.getElementById('send').onclick=()=>handle(document.getElementById('command').value);
-document.getElementById('command').addEventListener('keydown',e=>{if(e.key==='Enter')handle(e.target.value)});
-document.getElementById('clear').onclick=()=>{document.getElementById('command').value='';answer.textContent='Ready.'};
-document.getElementById('speak').onclick=()=>say('JARVIS voice system online. How may I assist you?');
-document.getElementById('listen').onclick=()=>{
- const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR){statusEl.textContent='VOICE RECOGNITION NOT SUPPORTED · TRY CHROME';say('Voice recognition is not supported in this browser. Please use typing.');return}
- const r=new SR();r.lang='en-IN';r.interimResults=false;r.maxAlternatives=1;
- app.classList.add('listening');statusEl.textContent='LISTENING…';r.onresult=e=>handle(e.results[0][0].transcript);
- r.onerror=()=>statusEl.textContent='MICROPHONE ERROR · CHECK PERMISSION';
- r.onend=()=>{app.classList.remove('listening');if(statusEl.textContent==='LISTENING…')statusEl.textContent='SYSTEM ONLINE · READY'};
- try{r.start()}catch(e){statusEl.textContent='PLEASE TRY AGAIN'}
+const API_URL = "https://jarvis-ai-brain.hrhemanth2507.workers.dev/";
+
+const statusEl = document.getElementById("status");
+const answer = document.getElementById("answer");
+const app = document.getElementById("app");
+const command = document.getElementById("command");
+
+function say(text) {
+  answer.textContent = text;
+
+  if ("speechSynthesis" in window) {
+    speechSynthesis.cancel();
+    const voice = new SpeechSynthesisUtterance(text);
+    voice.lang = "en-IN";
+    voice.rate = 0.95;
+    speechSynthesis.speak(voice);
+  }
+}
+
+async function handle(raw) {
+  const message = raw.trim();
+  if (!message) return;
+
+  command.value = message;
+  const q = message.toLowerCase();
+
+  // Local commands
+  if (q.includes("what time") || q === "time") {
+    say("The current time is " + new Date().toLocaleTimeString());
+    statusEl.textContent = "SYSTEM ONLINE · READY";
+    return;
+  }
+
+  if (q.includes("today") || q.includes("date")) {
+    say("Today is " + new Date().toLocaleDateString("en-IN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }));
+    statusEl.textContent = "SYSTEM ONLINE · READY";
+    return;
+  }
+
+  if (q.includes("open youtube")) {
+    say("Opening YouTube.");
+    window.open("https://m.youtube.com", "_blank");
+    return;
+  }
+
+  if (q.includes("open google")) {
+    say("Opening Google.");
+    window.open("https://google.com", "_blank");
+    return;
+  }
+
+  // Gemini AI commands
+  statusEl.textContent = "JARVIS AI · THINKING...";
+  answer.textContent = "Connecting to JARVIS AI...";
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: message
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "AI connection failed");
+    }
+
+    if (!data.reply) {
+      throw new Error("No AI response received");
+    }
+
+    statusEl.textContent = "JARVIS AI · ONLINE";
+    say(data.reply);
+
+  } catch (error) {
+    statusEl.textContent = "CONNECTION ERROR";
+    say("Sorry. I cannot connect to my AI brain right now. Please check your internet connection or Cloudflare Worker.");
+    console.error(error);
+  }
+}
+
+// Send typed message
+document.getElementById("send").onclick = () => {
+  handle(command.value);
 };
-if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+command.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    handle(command.value);
+  }
+});
+
+// Clear button
+document.getElementById("clear").onclick = () => {
+  command.value = "";
+  answer.textContent = "Ready.";
+  statusEl.textContent = "SYSTEM ONLINE · READY";
+};
+
+// Test voice
+document.getElementById("speak").onclick = () => {
+  say("JARVIS voice system online. How may I assist you?");
+};
+
+// Microphone voice commands
+document.getElementById("listen").onclick = () => {
+  const SR = window.SpeechRecognition ||
+             window.webkitSpeechRecognition;
+
+  if (!SR) {
+    statusEl.textContent = "VOICE NOT SUPPORTED";
+    say("Voice recognition is not supported. Please use typing.");
+    return;
+  }
+
+  const recognition = new SR();
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  app.classList.add("listening");
+  statusEl.textContent = "LISTENING...";
+
+  recognition.onresult = event => {
+    const spokenText = event.results[0][0].transcript;
+    handle(spokenText);
+  };
+
+  recognition.onerror = event => {
+    statusEl.textContent = "MICROPHONE ERROR";
+    console.error(event.error);
+  };
+
+  recognition.onend = () => {
+    app.classList.remove("listening");
+
+    if (statusEl.textContent === "LISTENING...") {
+      statusEl.textContent = "SYSTEM ONLINE · READY";
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    statusEl.textContent = "PLEASE TRY AGAIN";
+  }
+};
+
+// Register service worker
+if ("serviceWorker" in navigator &&
+    location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("./sw.js").catch(console.error);
+}
+</script>
 </script></body></html>
